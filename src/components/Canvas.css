@@ -1,0 +1,310 @@
+.canvas-page {
+  height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.canvas-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.canvas-toolbar h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  color: var(--text-primary);
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.zoom-level {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  padding: 0.5rem 1rem;
+  background: var(--bg);
+  border-radius: 8px;
+}
+
+.btn-small {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+}
+
+.canvas-hint {
+  text-align: center;
+  padding: 0.5rem;
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.canvas-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: 
+    radial-gradient(circle at 1px 1px, var(--border) 1px, transparent 0);
+  background-size: 40px 40px;
+  cursor: grab;
+}
+
+.canvas-container:active {
+  cursor: grabbing;
+}
+
+.canvas-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+.connections-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.connections-layer .connection {
+  pointer-events: all;
+}
+
+.connection-delete,
+.connection-delete-icon {
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.connection:hover .connection-delete,
+.connection:hover .connection-delete-icon {
+  opacity: 1;
+}
+
+/* Canvas Cards */
+.canvas-card {
+  position: absolute;
+  padding: 1rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  cursor: move;
+  user-select: none;
+  transition: box-shadow 0.2s, transform 0.1s;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.canvas-card:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+.canvas-card.selected {
+  box-shadow: 0 0 0 3px var(--primary), 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+.canvas-card.connecting-mode {
+  cursor: crosshair;
+}
+
+.canvas-card.connecting-mode:hover {
+  transform: scale(1.02);
+  box-shadow: 0 0 0 3px var(--accent), 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+.card-question {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: rgba(0, 0, 0, 0.8);
+  line-height: 1.4;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.card-answer {
+  flex: 1;
+  font-size: 0.85rem;
+  color: rgba(0, 0, 0, 0.7);
+  line-height: 1.5;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+
+.card-date {
+  font-size: 0.7rem;
+  color: rgba(0, 0, 0, 0.5);
+  text-align: right;
+  font-family: 'Space Mono', monospace;
+}
+
+.card-actions {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.canvas-card:hover .card-actions {
+  opacity: 1;
+}
+
+.card-action-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  transition: transform 0.2s;
+}
+
+.card-action-btn:hover {
+  transform: scale(1.1);
+}
+
+.color-picker {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+}
+
+.color-swatch {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.color-swatch:hover {
+  transform: scale(1.15);
+}
+
+/* Annotations */
+.canvas-annotation {
+  position: absolute;
+  min-width: 120px;
+  max-width: 250px;
+  background: var(--surface);
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  cursor: move;
+  user-select: none;
+  transition: border-color 0.2s;
+}
+
+.canvas-annotation:hover {
+  border-color: var(--primary);
+}
+
+.canvas-annotation.editing {
+  cursor: text;
+  border-style: solid;
+  border-color: var(--primary);
+}
+
+.annotation-text {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.annotation-edit textarea {
+  width: 100%;
+  min-height: 60px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  resize: none;
+  outline: none;
+  line-height: 1.5;
+}
+
+.annotation-delete {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: var(--danger);
+  color: white;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.canvas-annotation:hover .annotation-delete {
+  opacity: 1;
+}
+
+/* Empty State */
+.canvas-empty {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.canvas-empty .empty-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.canvas-empty h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.canvas-empty p {
+  font-size: 1rem;
+}
