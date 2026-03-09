@@ -15,10 +15,14 @@ export function QuestionBank() {
   const [showConfirmClear, setShowConfirmClear] = useState(false);
 
   useEffect(() => {
-    setQuestions(getQuestions());
+    const init = async () => {
+      const loaded = await getQuestions();
+      setQuestions(loaded);
+    };
+    init();
   }, []);
 
-  const handleAddQuestions = () => {
+  const handleAddQuestions = async () => {
     const lines = inputText
       .split('\n')
       .map((line) => line.trim())
@@ -32,18 +36,20 @@ export function QuestionBank() {
       createdAt: Date.now(),
     }));
 
-    const updated = addQuestions(newQuestions);
+    await addQuestions(newQuestions);
+    const updated = await getQuestions();
     setQuestions(updated);
     setInputText('');
   };
 
-  const handleDelete = (id: string) => {
-    const updated = deleteQuestion(id);
+  const handleDelete = async (id: string) => {
+    await deleteQuestion(id);
+    const updated = await getQuestions();
     setQuestions(updated);
   };
 
-  const handleClearAll = () => {
-    clearAllQuestions();
+  const handleClearAll = async () => {
+    await clearAllQuestions();
     setQuestions([]);
     setShowConfirmClear(false);
   };
