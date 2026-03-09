@@ -16,6 +16,10 @@ import './DailyJournal.css';
 
 const QUESTIONS_PER_SESSION = 10;
 
+function parseQuestionIds(session: DailySession): string[] {
+  return JSON.parse(session.selectedQuestionIds) as string[];
+}
+
 export function DailyJournal() {
   const navigate = useNavigate();
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -25,72 +29,76 @@ export function DailyJournal() {
   const [isStarted, setIsStarted] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [alreadyJournaledToday, setAlreadyJournaledToday] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const allQuestions = getQuestions();
-    setQuestions(allQuestions);
+    const init = async () => {
+      const allQuestions = await getQuestions();
+      setQuestions(allQuestions);
 
-    // Check if already journaled today
-    if (hasJournaledToday()) {
-      setAlreadyJournaledToday(true);
-      return;
-    }
+      const journaledToday = await hasJournaledToday();
+      if (journaledToday) {
+        setAlreadyJournaledToday(true);
+        setLoading(false);
+        return;
+      }
 
-    // Check for existing session
-    const existingSession = getCurrentSession();
-    if (existingSession && existingSession.date === getTodayDateString() && !existingSession.completed) {
-      setSession(existingSession);
-      setIsStarted(true);
-      loadQuestionAtIndex(existingSession, allQuestions);
-    }
+      const existingSession = await getCurrentSession();
+      if (existingSession && existingSession.date === getTodayDateString() && !existingSession.completed) {
+        setSession(existingSession);
+        setIsStarted(true);
+        loadQuestionAtIndex(existingSession, allQuestions);
+      }
+      setLoading(false);
+    };
+    init();
   }, []);
 
   const loadQuestionAtIndex = (sess: DailySession, allQuestions: Question[]) => {
-    const questionId = sess.selectedQuestionIds[sess.currentIndex];
+    const questionIds = parseQuestionIds(sess);
+    const questionId = questionIds[sess.currentIndex];
     const question = allQuestions.find((q) => q.id === questionId);
     setCurrentQuestion(question || null);
   };
 
-  const startSession = () => {
-    const selectedIds = selectRandomQuestions(QUESTIONS_PER_SESSION);
+  const startSession = async () => {
+    const selectedIds = await selectRandomQuestions(QUESTIONS_PER_SESSION);
     if (selectedIds.length === 0) return;
 
     const newSession: DailySession = {
       date: getTodayDateString(),
-      selectedQuestionIds: selectedIds,
+      selectedQuestionIds: JSON.stringify(selectedIds),
       currentIndex: 0,
       completed: false,
       answeredCount: 0,
       skippedCount: 0,
     };
 
-    saveSession(newSession);
+    await saveSession(newSession);
     setSession(newSession);
     setIsStarted(true);
     loadQuestionAtIndex(newSession, questions);
   };
 
-  const moveToNext = (updatedSession: DailySession) => {
-    if (updatedSession.currentIndex >= updatedSession.selectedQuestionIds.length - 1) {
-      // Session complete
+  const moveToNext = async (updatedSession: DailySession) => {
+    const questionIds = parseQuestionIds(updatedSession);
+    if (updatedSession.currentIndex >= questionIds.length - 1) {
       updatedSession.completed = true;
-      saveSession(updatedSession);
+      await saveSession(updatedSession);
       setSession(updatedSession);
       setIsCompleted(true);
     } else {
-      // Move to next question
       updatedSession.currentIndex += 1;
-      saveSession(updatedSession);
+      await saveSession(updatedSession);
       setSession(updatedSession);
       loadQuestionAtIndex(updatedSession, questions);
       setAnswer('');
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!session || !currentQuestion || !answer.trim()) return;
 
-    // Save the entry
     const entry: JournalEntry = {
       id: uuidv4(),
       questionId: currentQuestion.id,
@@ -99,39 +107,49 @@ export function DailyJournal() {
       createdAt: Date.now(),
       sessionDate: session.date,
     };
-    addEntry(entry);
+    await addEntry(entry);
 
-    // Update session
     const updatedSession = {
       ...session,
       answeredCount: session.answeredCount + 1,
     };
-    moveToNext(updatedSession);
+    await moveToNext(updatedSession);
   };
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
     if (!session) return;
 
     const updatedSession = {
       ...session,
       skippedCount: session.skippedCount + 1,
     };
-    moveToNext(updatedSession);
+    await moveToNext(updatedSession);
   };
 
   const handleFinish = () => {
     navigate('/canvas');
   };
 
-  const handleStartFresh = () => {
-    clearSession();
+  const handleStartFresh = async () => {
+    await clearSession();
     setAlreadyJournaledToday(false);
     setIsCompleted(false);
     setIsStarted(false);
     setSession(null);
   };
 
-  // Not enough questions
+  if (loading) {
+    return (
+      <div className="daily-journal">
+        <div className="journal-container centered">
+          <div className="empty-state">
+            <p>Loading...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (questions.length === 0) {
     return (
       <div className="daily-journal">
@@ -149,7 +167,6 @@ export function DailyJournal() {
     );
   }
 
-  // Already journaled today
   if (alreadyJournaledToday) {
     return (
       <div className="daily-journal">
@@ -172,7 +189,6 @@ export function DailyJournal() {
     );
   }
 
-  // Session completed
   if (isCompleted && session) {
     return (
       <div className="daily-journal">
@@ -200,7 +216,6 @@ export function DailyJournal() {
     );
   }
 
-  // Not started yet
   if (!isStarted) {
     return (
       <div className="daily-journal">
@@ -224,7 +239,8 @@ export function DailyJournal() {
     );
   }
 
-  // Active session
+  const questionIds = session ? parseQuestionIds(session) : [];
+
   return (
     <div className="daily-journal">
       <div className="journal-container">
@@ -232,12 +248,12 @@ export function DailyJournal() {
           <div
             className="progress-fill"
             style={{
-              width: `${((session?.currentIndex || 0) / (session?.selectedQuestionIds.length || 1)) * 100}%`,
+              width: `${((session?.currentIndex || 0) / (questionIds.length || 1)) * 100}%`,
             }}
           />
         </div>
         <div className="progress-text">
-          Question {(session?.currentIndex || 0) + 1} of {session?.selectedQuestionIds.length}
+          Question {(session?.currentIndex || 0) + 1} of {questionIds.length}
         </div>
 
         <div className="question-card">

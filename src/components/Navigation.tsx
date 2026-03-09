@@ -18,6 +18,9 @@ export function Navigation() {
         <NavLink to="/canvas" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
           Canvas
         </NavLink>
+        <NavLink to="/settings" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+          Settings
+        </NavLink>
       </div>
     </nav>
   );

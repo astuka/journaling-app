@@ -18,42 +18,46 @@ export interface CardPosition {
   y: number;
 }
 
-export interface CardStyle {
-  color: string;
-}
-
 export interface CanvasCard {
   id: string;
   entryId: string;
-  position: CardPosition;
-  style: CardStyle;
+  positionX: number;
+  positionY: number;
+  color: string;
 }
 
-export interface Connection {
+export interface CanvasConnection {
   id: string;
   fromCardId: string;
   toCardId: string;
 }
 
-export interface Annotation {
+export interface CanvasAnnotation {
   id: string;
   text: string;
-  position: CardPosition;
+  positionX: number;
+  positionY: number;
 }
 
-export interface CanvasState {
-  cards: CanvasCard[];
-  connections: Connection[];
-  annotations: Annotation[];
-  viewOffset: CardPosition;
+export interface CanvasViewState {
+  viewOffsetX: number;
+  viewOffsetY: number;
   zoom: number;
 }
 
 export interface DailySession {
   date: string; // YYYY-MM-DD
-  selectedQuestionIds: string[];
+  selectedQuestionIds: string; // JSON string of string[]
   currentIndex: number;
   completed: boolean;
   answeredCount: number;
   skippedCount: number;
+}
+
+export interface ExportData {
+  questions: Question[];
+  entries: JournalEntry[];
+  canvasCards: CanvasCard[];
+  canvasConnections: CanvasConnection[];
+  canvasAnnotations: CanvasAnnotation[];
 }
