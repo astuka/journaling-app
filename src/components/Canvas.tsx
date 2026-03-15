@@ -21,6 +21,9 @@ import {
   removeCanvasAnnotation,
   saveCanvasViewState,
   getTodayDateString,
+  getArchivedCanvasCards,
+  archiveCanvasCard,
+  unarchiveCanvasCard,
 } from '../utils/storage';
 import './Canvas.css';
 
@@ -68,25 +71,32 @@ export function Canvas() {
   const [showColorPicker, setShowColorPicker] = useState<string | null>(null);
   const [editingAnnotation, setEditingAnnotation] = useState<string | null>(null);
   const [annotationInput, setAnnotationInput] = useState('');
+  const [archivedCards, setArchivedCards] = useState<CanvasCard[]>([]);
+  const [showArchive, setShowArchive] = useState(false);
 
   useEffect(() => {
     const init = async () => {
-      const [allEntries, savedCards, savedConnections, savedAnnotations, savedViewState] =
+      const [allEntries, savedCards, savedConnections, savedAnnotations, savedViewState, savedArchivedCards] =
         await Promise.all([
           getEntries(),
           getCanvasCards(),
           getCanvasConnections(),
           getCanvasAnnotations(),
           getCanvasViewState(),
+          getArchivedCanvasCards(),
         ]);
 
       setEntries(allEntries);
       setConnections(savedConnections);
       setAnnotations(savedAnnotations);
       setViewState(savedViewState);
+      setArchivedCards(savedArchivedCards);
 
       // Create cards for new entries that don't have cards yet
-      const existingEntryIds = new Set(savedCards.map((c) => c.entryId));
+      const existingEntryIds = new Set([
+        ...savedCards.map((c) => c.entryId),
+        ...savedArchivedCards.map((c) => c.entryId),
+      ]);
       const today = getTodayDateString();
 
       const newCards: CanvasCard[] = [];
@@ -349,6 +359,29 @@ export function Canvas() {
     setAnnotations((prev) => prev.filter((a) => a.id !== id));
   };
 
+  const handleArchiveCard = async (cardId: string) => {
+    await archiveCanvasCard(cardId);
+    const card = cards.find((c) => c.id === cardId);
+    if (card) {
+      setArchivedCards((prev) => [...prev, card]);
+    }
+    setCards((prev) => prev.filter((c) => c.id !== cardId));
+    setConnections((prev) =>
+      prev.filter((c) => c.fromCardId !== cardId && c.toCardId !== cardId)
+    );
+    setSelectedCard(null);
+    setShowColorPicker(null);
+  };
+
+  const handleUnarchiveCard = async (cardId: string) => {
+    await unarchiveCanvasCard(cardId);
+    const card = archivedCards.find((c) => c.id === cardId);
+    if (card) {
+      setCards((prev) => [...prev, card]);
+    }
+    setArchivedCards((prev) => prev.filter((c) => c.id !== cardId));
+  };
+
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
@@ -378,6 +411,12 @@ export function Canvas() {
       <div className="canvas-toolbar">
         <h2>Reflection Canvas</h2>
         <div className="toolbar-actions">
+          <button
+            className={`btn btn-small ${showArchive ? 'btn-active' : ''}`}
+            onClick={() => setShowArchive(!showArchive)}
+          >
+            Archive ({archivedCards.length})
+          </button>
           <span className="zoom-level">{Math.round(viewState.zoom * 100)}%</span>
           <button className="btn btn-small" onClick={resetView}>
             Reset View
@@ -388,6 +427,52 @@ export function Canvas() {
       <div className="canvas-hint">
         Double-click to add annotation • Drag cards to move • Click connector button to link cards
       </div>
+
+      <div className="canvas-body">
+        {showArchive && (
+          <div className="archive-sidebar">
+            <div className="archive-header">
+              <h3>Archived Cards</h3>
+              <button
+                className="archive-close-btn"
+                onClick={() => setShowArchive(false)}
+              >
+                ×
+              </button>
+            </div>
+            {archivedCards.length === 0 ? (
+              <div className="archive-empty">No archived cards</div>
+            ) : (
+              <div className="archive-list">
+                {archivedCards.map((card) => {
+                  const entry = entries.find((e) => e.id === card.entryId);
+                  if (!entry) return null;
+                  return (
+                    <div
+                      key={card.id}
+                      className="archive-item"
+                      style={{ borderLeftColor: card.color }}
+                    >
+                      <div className="archive-item-question">{entry.questionText}</div>
+                      <div className="archive-item-answer">{entry.answer}</div>
+                      <div className="archive-item-footer">
+                        <span className="archive-item-date">
+                          {new Date(entry.createdAt).toLocaleDateString()}
+                        </span>
+                        <button
+                          className="btn btn-small"
+                          onClick={() => handleUnarchiveCard(card.id)}
+                        >
+                          Restore
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
       <div
         ref={canvasRef}
@@ -494,6 +579,17 @@ export function Canvas() {
                   {new Date(entry.createdAt).toLocaleDateString()}
                 </div>
 
+                <button
+                  className="card-archive-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleArchiveCard(card.id);
+                  }}
+                  title="Archive card"
+                >
+                  ×
+                </button>
+
                 <div className="card-actions">
                   <button
                     className="card-action-btn connect"
@@ -589,6 +685,7 @@ export function Canvas() {
             <p>Complete a daily journal session to see your reflections here</p>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

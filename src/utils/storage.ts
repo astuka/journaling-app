@@ -45,6 +45,18 @@ export async function upsertCanvasCard(card: CanvasCard): Promise<void> {
   await invoke('upsert_canvas_card', { card });
 }
 
+export async function getArchivedCanvasCards(): Promise<CanvasCard[]> {
+  return invoke<CanvasCard[]>('get_archived_canvas_cards');
+}
+
+export async function archiveCanvasCard(id: string): Promise<void> {
+  await invoke('archive_canvas_card', { id });
+}
+
+export async function unarchiveCanvasCard(id: string): Promise<void> {
+  await invoke('unarchive_canvas_card', { id });
+}
+
 // Canvas Connections
 export async function getCanvasConnections(): Promise<CanvasConnection[]> {
   return invoke<CanvasConnection[]>('get_canvas_connections');

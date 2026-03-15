@@ -178,6 +178,21 @@ impl Database {
         )
         .map_err(|e| format!("Migration failed: {}", e))?;
 
+        // Migration v2: add archived column to canvas_cards
+        let version: i32 = conn
+            .query_row("SELECT MAX(version) FROM schema_version", [], |row| row.get(0))
+            .unwrap_or(1);
+
+        if version < 2 {
+            conn.execute_batch(
+                "
+                ALTER TABLE canvas_cards ADD COLUMN archived INTEGER NOT NULL DEFAULT 0;
+                INSERT OR REPLACE INTO schema_version (version) VALUES (2);
+                ",
+            )
+            .map_err(|e| format!("Migration v2 failed: {}", e))?;
+        }
+
         Ok(())
     }
 
@@ -262,7 +277,7 @@ impl Database {
     pub fn get_canvas_cards(&self) -> Result<Vec<CanvasCard>, String> {
         let conn = self.conn.lock().map_err(|e| e.to_string())?;
         let mut stmt = conn
-            .prepare("SELECT id, entry_id, position_x, position_y, color FROM canvas_cards")
+            .prepare("SELECT id, entry_id, position_x, position_y, color FROM canvas_cards WHERE archived = 0")
             .map_err(|e| e.to_string())?;
         let rows = stmt
             .query_map([], |row| {
@@ -284,6 +299,52 @@ impl Database {
         conn.execute(
             "INSERT OR REPLACE INTO canvas_cards (id, entry_id, position_x, position_y, color) VALUES (?1, ?2, ?3, ?4, ?5)",
             params![card.id, card.entry_id, card.position_x, card.position_y, card.color],
+        )
+        .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    pub fn get_archived_canvas_cards(&self) -> Result<Vec<CanvasCard>, String> {
+        let conn = self.conn.lock().map_err(|e| e.to_string())?;
+        let mut stmt = conn
+            .prepare("SELECT id, entry_id, position_x, position_y, color FROM canvas_cards WHERE archived = 1")
+            .map_err(|e| e.to_string())?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok(CanvasCard {
+                    id: row.get(0)?,
+                    entry_id: row.get(1)?,
+                    position_x: row.get(2)?,
+                    position_y: row.get(3)?,
+                    color: row.get(4)?,
+                })
+            })
+            .map_err(|e| e.to_string())?;
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())
+    }
+
+    pub fn archive_canvas_card(&self, id: &str) -> Result<(), String> {
+        let conn = self.conn.lock().map_err(|e| e.to_string())?;
+        conn.execute(
+            "UPDATE canvas_cards SET archived = 1 WHERE id = ?1",
+            params![id],
+        )
+        .map_err(|e| e.to_string())?;
+        // Remove connections involving this card
+        conn.execute(
+            "DELETE FROM canvas_connections WHERE from_card_id = ?1 OR to_card_id = ?1",
+            params![id],
+        )
+        .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    pub fn unarchive_canvas_card(&self, id: &str) -> Result<(), String> {
+        let conn = self.conn.lock().map_err(|e| e.to_string())?;
+        conn.execute(
+            "UPDATE canvas_cards SET archived = 0 WHERE id = ?1",
+            params![id],
         )
         .map_err(|e| e.to_string())?;
         Ok(())
