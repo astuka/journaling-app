@@ -48,6 +48,21 @@ pub fn upsert_canvas_card(db: State<Database>, card: CanvasCard) -> Result<(), S
 }
 
 #[tauri::command]
+pub fn get_archived_canvas_cards(db: State<Database>) -> Result<Vec<CanvasCard>, String> {
+    db.get_archived_canvas_cards()
+}
+
+#[tauri::command]
+pub fn archive_canvas_card(db: State<Database>, id: String) -> Result<(), String> {
+    db.archive_canvas_card(&id)
+}
+
+#[tauri::command]
+pub fn unarchive_canvas_card(db: State<Database>, id: String) -> Result<(), String> {
+    db.unarchive_canvas_card(&id)
+}
+
+#[tauri::command]
 pub fn get_canvas_connections(db: State<Database>) -> Result<Vec<CanvasConnection>, String> {
     db.get_canvas_connections()
 }
